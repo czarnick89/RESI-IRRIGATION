@@ -126,16 +126,16 @@
 - `items`: JSON (list of heads, quantities, types)
 
 1. **Start Django Project**
-   a. Create new Django project (`django-admin startproject`)
-   b. Set up main app (e.g., `core` or `irrigation`)
-   c. Configure PostgreSQL database in `settings.py`
-   d. Set up virtual environment and install dependencies
+   a. Create new Django project (`django-admin startproject`)*
+   b. Set up main app (e.g., `core` or `irrigation`)*
+   c. Configure PostgreSQL database in `settings.py`*
+   d. Set up virtual environment and install dependencies*
 
 2. **Set Up User Authentication**
-   a. Install and configure Django REST Framework (DRF)
-   b. Set up JWT authentication (using `djangorestframework-simplejwt`)
-   c. Create User model (if customizing)
-   d. Implement registration, login, and email verification endpoints
+   a. Install and configure Django REST Framework (DRF)*
+   b. Set up JWT authentication (using `djangorestframework-simplejwt`)*
+   c. Create User model (if customizing) skipped for now
+   d. Implement registration*, login*, logout*, change password*, and email verification* endpoints - need to add resend email verification, throttling, change email, sing up with 3rd party?, update profile data, session management, logout all sessions
 
 3. **Create Core Backend Models & APIs**
    a. Define models: Project, Yard, SprinklerHead, Zone, BillOfMaterials
