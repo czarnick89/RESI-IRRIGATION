@@ -147,9 +147,10 @@
    d. Add permissions so users can only access their own data*
 
 4. **Implement Project & Yard Logic**
-   a. Add logic for saving partial yard data (autosave)
-   b. Implement endpoints for sketch data (accept/save JSON)
-   c. Add endpoints for generating sprinkler layouts (stub logic for now)
+   a. Add logic for saving partial yard data (autosave) * done on backend, need front end
+   b. Implement endpoints for sketch data (accept/save JSON)* need to make sure sketch can be editied and saved to db if needed
+   c. Add endpoints for generating sprinkler layouts (stub logic for now) * need to replace response with actual optimized layout once complete
+   d. Set up sprinkler head layout algo to optimize heads based on fully submitted data
 
 5. **Set Up React Frontend with Vite**
    a. Scaffold React app with Vite

@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.decorators import action, api_view, permission_classes
 
 # JWT imports
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -34,6 +35,7 @@ from .serializers import (
     ZoneSerializer,
     BillOfMaterialsSerializer,
     SketchElementSerializer,
+    FullProjectSetupSerializer,
 )
 from .utils import generate_verification_token, verify_email_token
 
@@ -182,6 +184,52 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+    @action(detail=False, methods=['post'], url_path='full-setup')
+    def create_full_project(self, request):
+        serializer = FullProjectSetupSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            project = serializer.save()
+            return Response({
+                "message": "Full project setup created successfully",
+                "project_id": project.id
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['post'], url_path='generate-layout')
+    def generate_layout(self, request):
+        yard_id = request.data.get("yard_id")
+
+        if not yard_id:
+            return Response({"error": "yard_id is required"}, status=400)
+
+        try:
+            yard = Yard.objects.get(id=yard_id, project__user=request.user)
+        except Yard.DoesNotExist:
+            return Response({"error": "Yard not found or access denied"}, status=404)
+
+        # --- STUB LOGIC ---
+        fake_layout = {
+            "zones": [
+                {
+                    "zone_number": 1,
+                    "sprinkler_heads": [
+                        {"x": 10, "y": 20, "radius": 15},
+                        {"x": 30, "y": 40, "radius": 15},
+                    ],
+                },
+                {
+                    "zone_number": 2,
+                    "sprinkler_heads": [
+                        {"x": 50, "y": 60, "radius": 20},
+                    ],
+                },
+            ],
+            "status": "layout_generated_stub"
+        }
+
+        return Response(fake_layout, status=200)
+     
 class YardViewSet(viewsets.ModelViewSet):
     serializer_class = YardSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwner]
