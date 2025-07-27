@@ -40,18 +40,33 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = '__all__'
-        read_only_fields = ['user', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at', 'user']
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        return Project.objects.create(user=user, **validated_data)
 
 class SketchElementSerializer(serializers.ModelSerializer):
     class Meta:
         model = SketchElement
         fields = '__all__'
+        read_only_fields = ['yard']
+
+    def create(self, validated_data):
+        yard = self.context['yard']
+        return SketchElement.objects.create(yard=yard, **validated_data)
 
 class SprinklerHeadSerializer(serializers.ModelSerializer):
+    location = serializers.JSONField(required=False)
+    
     class Meta:
         model = SprinklerHead
         fields = '__all__'
-        read_only_fields = ['head_number'] 
+        read_only_fields = ['head_number', 'zone']
+
+    def create(self, validated_data):
+        zone = self.context['zone']
+        return SprinklerHead.objects.create(zone=zone, **validated_data)
 
 class ZoneSerializer(serializers.ModelSerializer):
     sprinkler_heads = SprinklerHeadSerializer(many=True, read_only=True)
@@ -68,8 +83,47 @@ class YardSerializer(serializers.ModelSerializer):
     class Meta:
         model = Yard
         fields = '__all__'
+        read_only_fields = ['project']
 
-class BillOfMaterialsSerializer(serializers.ModelSerializer):
+    def create(self, validated_data):
+        project = self.context['project']
+        return Yard.objects.create(project=project, **validated_data)
+
+class BillOfMaterialsSerializer(serializers.ModelSerializer):   
     class Meta:
         model = BillOfMaterials
         fields = '__all__'
+
+class FullProjectSetupSerializer(serializers.Serializer):
+    project = ProjectSerializer()
+    yard = YardSerializer()
+    sprinkler_heads = SprinklerHeadSerializer(many=True)
+    sketch_elements = SketchElementSerializer(many=True)
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        user = request.user if request else None
+
+        project_data = validated_data.pop('project')
+        yard_data = validated_data.pop('yard')
+        sprinkler_heads_data = validated_data.pop('sprinkler_heads', [])
+        sketch_elements_data = validated_data.pop('sketch_elements', [])
+
+        # Create Project
+        project = Project.objects.create(user=user, **project_data)
+
+        # Create Yard
+        yard = Yard.objects.create(project=project, **yard_data)
+
+        # Create a default Zone
+        zone = Zone.objects.create(yard=yard, zone_number=1)
+
+        # Create Sprinkler Heads
+        for sh_data in sprinkler_heads_data:
+            SprinklerHead.objects.create(zone=zone, **sh_data)
+
+        # Create Sketch Elements
+        for se_data in sketch_elements_data:
+            SketchElement.objects.create(yard=yard, **se_data)
+
+        return project

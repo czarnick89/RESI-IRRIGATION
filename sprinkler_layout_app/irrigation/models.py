@@ -78,7 +78,7 @@ class SprinklerHead(models.Model):
     zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='sprinkler_heads')
     head_number = models.IntegerField(null=True, blank=True, help_text="Sequential number within the zone")
     type = models.CharField(max_length=100)
-    location = models.JSONField(help_text="Coordinates like {x: 10, y: 5}")
+    location = models.JSONField(null=True, blank=True, help_text="Coordinates like {x: 10, y: 5}")
     throw_radius = models.FloatField()
     flow_rate = models.FloatField()
     angle = models.FloatField(default=360.0)
