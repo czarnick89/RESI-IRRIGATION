@@ -100,6 +100,9 @@
 - `zip_code`: string
 - `water_pressure`: float (PSI)
 - `flow_rate`: float (GPM)
+
+### SketchElement may need to be broken into individual pieces
+- `id`: unique identifier
 - `sketch_data`: JSON (stores grid, shapes, obstacles, zones, etc.)
 
 ### SprinklerHead
@@ -135,13 +138,13 @@
    a. Install and configure Django REST Framework (DRF)*
    b. Set up JWT authentication (using `djangorestframework-simplejwt`)*
    c. Create User model (if customizing) skipped for now
-   d. Implement registration*, login*, logout*, change password*, and email verification* endpoints - need to add resend email verification, throttling, change email, sing up with 3rd party?, update profile data, session management, logout all sessions
+   d. Implement registration*, login*, logout*, change password*, and email verification* endpoints - need to add resend email verification, throttling, change email, sign up with 3rd party?, update profile data, session management, logout all sessions
 
 3. **Create Core Backend Models & APIs**
-   a. Define models: Project, Yard, SprinklerHead, Zone, BillOfMaterials
-   b. Create serializers for each model
-   c. Build CRUD API endpoints for each model
-   d. Add permissions so users can only access their own data
+   a. Define models: Project, Yard, SprinklerHead, Zone, BillOfMaterials*
+   b. Create serializers for each model*
+   c. Build CRUD API endpoints for each model*
+   d. Add permissions so users can only access their own data*
 
 4. **Implement Project & Yard Logic**
    a. Add logic for saving partial yard data (autosave)

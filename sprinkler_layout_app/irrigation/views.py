@@ -1,18 +1,41 @@
-from django.shortcuts import render
+# Django imports
+from django.contrib.auth.models import User
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.core.mail import send_mail
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+
+# DRF imports
+from rest_framework import status, permissions, viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework import status, permissions
+from rest_framework.exceptions import PermissionDenied
+
+# JWT imports
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
-from .serializers import RegisterSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer, CustomTokenObtainPairSerializer
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from django.core.mail import send_mail
-from django.contrib.auth.models import User
-from .utils import generate_verification_token, verify_email_token
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.token_blacklist.models import (
+    BlacklistedToken, OutstandingToken
+)
+
+# App imports
+from .models import (
+    Project, Yard, SprinklerHead, Zone, BillOfMaterials, SketchElement
+)
+from .serializers import (
+    RegisterSerializer,
+    PasswordResetRequestSerializer,
+    PasswordResetConfirmSerializer,
+    CustomTokenObtainPairSerializer,
+    ProjectSerializer,
+    YardSerializer,
+    SprinklerHeadSerializer,
+    ZoneSerializer,
+    BillOfMaterialsSerializer,
+    SketchElementSerializer,
+)
+from .utils import generate_verification_token, verify_email_token
 
 class HelloView(APIView):
     permission_classes = [IsAuthenticated]
@@ -109,7 +132,6 @@ class PasswordResetRequestView(APIView):
                 return Response({"detail": "Password reset link sent"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class PasswordResetConfirmView(APIView):
     permission_classes = [AllowAny]
 
@@ -137,3 +159,104 @@ class PasswordResetConfirmView(APIView):
     
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
+class IsOwner(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if hasattr(obj, 'user'):
+            return obj.user == request.user
+        if hasattr(obj, 'project') and hasattr(obj.project, 'user'):
+            return obj.project.user == request.user
+        if hasattr(obj, 'yard') and hasattr(obj.yard, 'project') and hasattr(obj.yard.project, 'user'):
+            return obj.yard.project.user == request.user
+        if hasattr(obj, 'zone') and hasattr(obj.zone, 'yard') and hasattr(obj.zone.yard, 'project') and hasattr(obj.zone.yard.project, 'user'):
+            return obj.zone.yard.project.user == request.user
+        return False
+    
+class ProjectViewSet(viewsets.ModelViewSet):
+    serializer_class = ProjectSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    def get_queryset(self):
+        return Project.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class YardViewSet(viewsets.ModelViewSet):
+    serializer_class = YardSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    def get_queryset(self):
+        return Yard.objects.filter(project__user=self.request.user)
+    def perform_create(self, serializer):
+        project_id = self.request.data.get('project')
+        try:
+            project = Project.objects.get(id=project_id, user=self.request.user)
+        except Project.DoesNotExist:
+            raise PermissionDenied("Invalid project or you do not have permission to add to it.")
+        
+        serializer.save(project=project)
+    
+class ZoneViewSet(viewsets.ModelViewSet):
+    serializer_class = ZoneSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    def get_queryset(self):
+        return Zone.objects.filter(yard__project__user=self.request.user)
+    
+    def perform_create(self, serializer):
+        yard_id = self.request.data.get('yard')
+        try:
+            yard = Yard.objects.get(id=yard_id, project__user=self.request.user)
+        except Yard.DoesNotExist:
+            raise PermissionDenied("Invalid yard or you do not have permission to add to it.")
+        
+        serializer.save(yard=yard)
+    
+class SprinklerHeadViewSet(viewsets.ModelViewSet):
+    serializer_class = SprinklerHeadSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    def get_queryset(self):
+        return SprinklerHead.objects.filter(zone__yard__project__user=self.request.user)
+    
+    def perform_create(self, serializer):
+        zone_id = self.request.data.get('zone')
+        try:
+            zone = Zone.objects.get(id=zone_id, yard__project__user=self.request.user)
+        except Zone.DoesNotExist:
+            raise PermissionDenied("Invalid zone or you do not have permission to add to it.")
+        
+        serializer.save(zone=zone)
+    
+class BillOfMaterialsViewSet(viewsets.ModelViewSet):
+    serializer_class = BillOfMaterialsSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    def get_queryset(self):
+        return BillOfMaterials.objects.filter(project__user=self.request.user)
+    
+    def perform_create(self, serializer):
+        project_id = self.request.data.get('project')
+        try:
+            project = Project.objects.get(id=project_id, user=self.request.user)
+        except Project.DoesNotExist:
+            raise PermissionDenied("Invalid project or you do not have permission to add to it.")
+        
+        serializer.save(project=project)
+   
+class SketchElementViewSet(viewsets.ModelViewSet):
+    serializer_class = SketchElementSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    def get_queryset(self):
+        return SketchElement.objects.filter(yard__project__user=self.request.user)
+    
+    def perform_create(self, serializer):
+        yard_id = self.request.data.get('yard')
+        try:
+            yard = Yard.objects.get(id=yard_id, project__user=self.request.user)
+        except Yard.DoesNotExist:
+            raise PermissionDenied("Invalid yard or you do not have permission to add to it.")
+        
+        serializer.save(yard=yard)
