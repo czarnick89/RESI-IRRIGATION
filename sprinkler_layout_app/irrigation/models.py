@@ -34,13 +34,14 @@ class Yard(models.Model):
 
 class SketchElement(models.Model):
     YARD_ELEMENT_TYPES = [
-        ('obstacle', 'Obstacle'),
-        ('slope', 'Slope'),
-        ('shade', 'Shade'),
-        ('zone', 'Zone'),  # Optional if zones handled separately
-        ('label', 'Label'),
+    ("obstacle", "Obstacle"),
+    ("slope", "Slope"),
+    ("full_sun", "Full Sun"),
+    ("partial_shade", "Partial Shade"),
+    ("full_shade", "Full Shade"),
+    ("label", "Label"),  
     ]
-
+    
     yard = models.ForeignKey('Yard', on_delete=models.CASCADE, related_name='sketch_elements')
     type = models.CharField(max_length=50, choices=YARD_ELEMENT_TYPES)
     geometry = models.JSONField(help_text="Geometry: point, polyline, or polygon as JSON")
@@ -75,7 +76,7 @@ class Zone(models.Model):
         return f"Zone {self.zone_number} for {self.yard}"
 
 class SprinklerHead(models.Model):
-    zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='sprinkler_heads')
+    zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='sprinkler_heads', null=True, blank=True)
     head_number = models.IntegerField(null=True, blank=True, help_text="Sequential number within the zone")
     type = models.CharField(max_length=100)
     location = models.JSONField(null=True, blank=True, help_text="Coordinates like {x: 10, y: 5}")

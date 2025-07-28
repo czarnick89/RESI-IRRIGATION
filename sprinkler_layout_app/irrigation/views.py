@@ -37,7 +37,10 @@ from .serializers import (
     SketchElementSerializer,
     FullProjectSetupSerializer,
 )
-from .utils import generate_verification_token, verify_email_token
+from .utils import generate_verification_token, verify_email_token, sanitize_layout_data
+from .layout_utils import parse_yard_geometry
+from shapely.geometry import Polygon
+from irrigation.layout.generator import generate_sprinkler_layout
 
 class HelloView(APIView):
     permission_classes = [IsAuthenticated]
@@ -206,29 +209,27 @@ class ProjectViewSet(viewsets.ModelViewSet):
         try:
             yard = Yard.objects.get(id=yard_id, project__user=request.user)
         except Yard.DoesNotExist:
-            return Response({"error": "Yard not found or access denied"}, status=404)
+            return Response({"error": "Yard not found"}, status=404)
 
-        # --- STUB LOGIC ---
-        fake_layout = {
-            "zones": [
-                {
-                    "zone_number": 1,
-                    "sprinkler_heads": [
-                        {"x": 10, "y": 20, "radius": 15},
-                        {"x": 30, "y": 40, "radius": 15},
-                    ],
-                },
-                {
-                    "zone_number": 2,
-                    "sprinkler_heads": [
-                        {"x": 50, "y": 60, "radius": 20},
-                    ],
-                },
-            ],
-            "status": "layout_generated_stub"
+        usable_area = parse_yard_geometry(yard)
+
+        #print("USABLE AREA:", usable_area)  # for dev inspection
+
+        if usable_area.is_empty:
+            area_bounds = None
+            sprinklers = []
+        else:
+            area_bounds = usable_area.bounds
+            sprinklers = generate_sprinkler_layout(yard)
+
+        raw_response = {
+        "status": "sprinklers_generated",
+        "area_bounds": area_bounds,
+        "sprinklers": sprinklers,
+        "zones": []  # <- stub for future zoning logic
         }
 
-        return Response(fake_layout, status=200)
+        return Response(sanitize_layout_data(raw_response), status=200)
      
 class YardViewSet(viewsets.ModelViewSet):
     serializer_class = YardSerializer
